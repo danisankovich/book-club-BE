@@ -2,6 +2,10 @@ var express = require('express');
 var router = express.Router();
 const https = require('https');
 
+const Pitches = require('../schema/Pitch');
+const Meetings = require('../schema/Meeting');
+const mongoose = require('mongoose');
+
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -23,21 +27,72 @@ router.get('/search', async function(req, res) {
   });
 });
 router.post('/pitch', async function(req, res) {
-  console.log(req.body);
-  res.send();
-});
+    Meetings.findOne({meetingId: req.body.meetingId}, (error, meeting) => {
+      if (error) {
+        console.error(error);
+        return res.send(error);
+      }
+      if (!meeting) {
+        return res.send('No Meeting Found with That ID');
+      }
+      const userFound = meeting.pitches.find(pitch => pitch.user.toLowerCase() === req.body.user.toLowerCase());
+      if (userFound) {
+        Meetings.updateOne({meetingId: req.body.meetingId, 'pitches.user': req.body.user}, {'$set': {
+          'pitches.$.title': req.body.title,
+          'pitches.$.authors': req.body.authors,
+          'pitches.$.description': req.body.description,
+          'pitches.$.thumbnail': req.body.thumbnail,
+          'pitches.$.votes': 0,
+        }}, function (err) {
+          if (err) {
+            console.error(err);
+            return res.send(err);
+          }
+          return res.send('Pitch Submitted')
+        })
+      } else {
+        var id = mongoose.Types.ObjectId();
+        meeting.pitches.push({...req.body, id});
+        meeting.save(err=> {
+          if (err) {
+            console.error(err);
+            return res.send(err);
+          }
+          res.send('Pitch Submitted')
+        });
+      }
+    })
+ });
 
-router.get('/poll', async function(req, res) {
-  res.send([
-    {id: '12345', title: 'title one', authors: 'name here', thumbnail: 'http://books.google.com/books/content?id=HHJwDwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', description: 'just a description'},
-    {id: '67890', title: 'title two', authors: 'name here', thumbnail: 'http://books.google.com/books/content?id=HHJwDwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', description: 'just a description'},
-    {id: 'abcde', title: 'title three', authors: 'name here', thumbnail: 'http://books.google.com/books/content?id=HHJwDwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', description: 'just a description'},
-  ]);
+router.get('/meeting', async function(req, res) {
+  Meetings.findOne({meetingId: req.query.queryField}, (err, meeting) => {
+    if (err) {
+      console.error(err);
+      return res.send(err);
+    }
+    res.send(meeting);
+  });
 });
 
 router.post('/vote', async function(req, res) {
   console.log(req.body);
-  res.send()
+  Meetings.findOne({meetingId: req.body.meetingId}, (err, meeting) => {
+    if (err) {
+      console.error(err);
+      return res.send(err);
+    }
+    if (!meeting) {
+      return res.send('No Meeting Found');
+    }
+    meeting.votes[req.body.user] = req.body.votes;
+    Meetings.updateOne({meetingId: req.body.meetingId}, { $set: {'votes': meeting.votes}}, (error) => {
+      if (error) {
+        console.log(error);
+        return res.send(error);
+      }
+      res.send('Votes Submitted')
+    });
+  });
 })
 
 module.exports = router;
