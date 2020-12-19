@@ -75,7 +75,6 @@ router.get('/meeting', async function(req, res) {
 });
 
 router.post('/vote', async function(req, res) {
-  console.log(req.body);
   Meetings.findOne({meetingId: req.body.meetingId}, (err, meeting) => {
     if (err) {
       console.error(err);
@@ -115,5 +114,36 @@ router.get('/results', (req, res) => {
     });
   });
 });
+
+router.post('/newMeeting', async (req, res) => {
+  const meetingId = await generateId();
+  const newMeeting = new Meetings({
+    ...req.body, meetingId
+  })
+
+  newMeeting.save(err => {
+    if (err) {
+      console.error(err);
+      return res.send(err);
+    }
+    res.send(newMeeting.meetingId);
+  });
+});
+
+async function generateId() {
+  const possible = 'abcdefghijklmnopqrstuvwxyz1234567890';
+  const possibleLength = 36;
+  const str = `${possible[Math.floor(Math.random() * possibleLength)]}${possible[Math.floor(Math.random() * possibleLength)]}${possible[Math.floor(Math.random() * possibleLength)]}${possible[Math.floor(Math.random() * possibleLength)]}${possible[Math.floor(Math.random() * possibleLength)]}${possible[Math.floor(Math.random() * possibleLength)]}`
+  let found;
+  try {
+    found = await Meetings.findOne({meetingId: str});
+    if (found) {
+      return generateId();
+    }
+    return str;
+  } catch(err) {
+    console.error(err);
+  }
+}
 
 module.exports = router;
