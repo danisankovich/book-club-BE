@@ -6,6 +6,7 @@ var MeetingsSchema = new Schema({ // Create Schema
     meetingDate: String,
     meetingId: String,
     isVisibleToUsers: Boolean,
+    groupId: String,
     pitches: [],
     votes: {}
 })

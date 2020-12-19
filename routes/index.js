@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 const https = require('https');
 
-const Pitches = require('../schema/Pitch');
+const Groups = require('../schema/Group');
 const Meetings = require('../schema/Meeting');
 const mongoose = require('mongoose');
 
@@ -93,6 +93,27 @@ router.post('/vote', async function(req, res) {
       res.send('Votes Submitted')
     });
   });
-})
+});
+
+router.get('/results', (req, res) => {
+  console.log(req.query.queryField)
+  Groups.findOne({groupId: req.query.queryField}, (err, group) => {
+    if (err) {
+      console.error(err);
+      return res.send(err)
+    }
+    if (!group) {
+      return res.send('No Groups Found');
+    }
+    Meetings.find({groupId: req.query.queryField}, (error, meetings) => {
+      if (error) {
+        console.error(error);
+        return res.send(error);
+      }
+
+      res.send({group, meetings});
+    });
+  });
+});
 
 module.exports = router;
